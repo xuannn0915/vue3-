@@ -6,7 +6,7 @@
     <link href="images/favicon.ico" rel="shortcut icon" />
     <meta charset="UTF-8" />
     <script src="/javascripts/vendor.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.2.37/vue.global.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.0.2/vue.global.js"></script>
   </head>
   <body class="bg-lighter">
     <div class="container main my-5">
@@ -22,15 +22,15 @@
           <div id="app">
             <div class="container gx-2">
               <div class="row gx-3 bg-light py-3">
-                <!-- 左側選單 -->
                 <div class="col-md-4">
+                  <!-- 左側清單 -->
                   <div class="list-group">
                     <a
                       href="#"
                       class="list-group-item list-group-item-action"
                       v-for="drink in products"
                       :key="drink.name"
-                      @click.prevent="selectItem(drink)"
+                      @click.prevent="selectDrink(drink)"
                       :class="{'active':itemSelected.name === drink.name}"
                     >
                       <h6 class="card-title mb-1">{{drink.name}}</h6>
@@ -44,7 +44,7 @@
                   </div>
                 </div>
                 <div class="col-md-8">
-                  <!-- 遮罩 -->
+                  <!-- 訂單內容 -->
                   <div class="card mb-2">
                     <div
                       class="position-absolute text-white d-flex align-items-center justify-content-center"
@@ -60,8 +60,6 @@
                     >
                       請先選擇飲品
                     </div>
-
-                    <!-- 細節調整 -->
                     <div class="card-body px-4">
                       <div class="mb-3">
                         <label for="productNum" class="form-label">數量</label>
@@ -90,7 +88,6 @@
                             :id="'ice'+key"
                             :value="ice"
                             v-model="itemSelected.ice"
-                            :disabled="!itemSelected.hasOwnProperty('defaults')|| (itemSelected.defaults.ice!== '' && itemSelected.defaults.ice!== ice)"
                           />
                           <label class="form-check-label" :for="'ice'+key"
                             >{{ice}}</label
@@ -113,7 +110,6 @@
                             :id="'sugar'+key"
                             :value="sugar"
                             v-model="itemSelected.sugar"
-                            :disabled="!itemSelected.hasOwnProperty('defaults')|| (itemSelected.defaults.sugar!== '' && itemSelected.defaults.sugar!== sugar)"
                           />
                           <label class="form-check-label" :for="'sugar'+key"
                             >{{sugar}}</label
@@ -135,7 +131,6 @@
                             :id="'topping'+key"
                             :value="topping"
                             v-model="itemSelected.topping"
-                            :disabled="!itemSelected.hasOwnProperty('defaults') || itemSelected.defaults.toppings.includes(topping)"
                           />
                           <label class="form-check-label" :for="'topping'+key"
                             >{{topping}}</label
@@ -164,7 +159,7 @@
                         <button
                           class="btn btn-primary w-100"
                           type="button"
-                          @click.prevent="addOrder(itemSelected)"
+                          @click.prevent="addDrink(itemSelected)"
                         >
                           加入
                         </button>
@@ -172,7 +167,7 @@
                     </div>
                   </div>
 
-                  <!-- 清單 -->
+                  <!-- 訂單明細 -->
                   <div class="card">
                     <div class="card-body">
                       <table class="table">
@@ -187,11 +182,11 @@
                             <th scope="col">小計</th>
                           </tr>
                         </thead>
-                        <tbody
-                          v-for="(order, key) in orderList"
-                          :key="'order'+key"
-                        >
-                          <tr>
+                        <tbody>
+                          <tr
+                            v-for="(order, key) in orderList"
+                            :key="'order'+key"
+                          >
                             <th scope="row">
                               {{order.name}}<br />
                               <small class="text-muted fw-normal"
@@ -201,16 +196,18 @@
                             <td>{{order.ice.toString()}}</td>
                             <td>{{order.sugar.toString()}}</td>
                             <td>{{order.topping.toString()}}</td>
-                            <td>{{order.price}}</td>
+                            <td>{{order.price+order.topping.length*10}}</td>
                             <td>{{order.count}}</td>
-                            <td class="text-end">{{order.drinkTotal}}</td>
+                            <td class="text-end">
+                              {{(order.price+order.topping.length*10)*order.count}}
+                            </td>
                           </tr>
                         </tbody>
                       </table>
-                      <p class="text-end">共 NT$ {{listTotal}} 元</p>
+                      <p class="text-end">共 NT$ {{orderTotal}}元</p>
                       <button
                         class="btn btn-sm btn-secondary w-100"
-                        @click.prevent="createList()"
+                        @click.prevent="sendList(orderList)"
                       >
                         產生訂單
                       </button>
@@ -220,12 +217,13 @@
               </div>
             </div>
 
-            <!-- 產生訂單 -->
+            <!-- 訂單產生 -->
             <div class="bg-light p-3 mt-3">
               <div
-                class="bg-white p-3 d-flex flex-column"
+                class="bg-white p-3 d-flex flex-column mb-3"
                 style="min-height: 450px"
-                v-if="finalList.length!==0"
+                v-for="(final, key) in finalList"
+                :key="'final'+key"
               >
                 <table class="table">
                   <thead>
@@ -239,27 +237,32 @@
                       <th scope="col">小計</th>
                     </tr>
                   </thead>
-                  <tbody v-for="(final, key) in finalList" :key="'final'+key">
-                    <tr>
+                  <tbody>
+                    <tr
+                      v-for="(finalItem, key) in final"
+                      :key="'finalItem'+key"
+                    >
                       <th scope="row">
-                        {{final.name}}<br />
+                        {{finalItem.name}}<br />
                         <small class="text-muted fw-normal"
-                          >備註：{{final.comment}}</small
+                          >備註：{{finalItem.comment}}</small
                         >
                       </th>
-                      <td>{{final.ice.toString()}}</td>
-                      <td>{{final.sugar.toString()}}</td>
-                      <td>{{final.topping.toString()}}</td>
-                      <td>{{final.price}}</td>
-                      <td>{{final.count}}</td>
-                      <td class="text-end">{{final.drinkTotal}}</td>
+                      <td>{{finalItem.ice.toString()}}</td>
+                      <td>{{finalItem.sugar.toString()}}</td>
+                      <td>{{finalItem.topping.toString()}}</td>
+                      <td>{{finalItem.price+finalItem.topping.length*10}}</td>
+                      <td>{{finalItem.count}}</td>
+                      <td class="text-end">
+                        {{(finalItem.price+finalItem.topping.length*10)*finalItem.count}}
+                      </td>
                     </tr>
                   </tbody>
                 </table>
-                <p class="mt-3 mb-1">訂單成立時間：{{time}}</p>
-                <p class="mb-1">餐點數： {{listNumber}}</p>
+                <p class="mt-3 mb-1" v-model="time">訂單成立時間：{{time}}</p>
+                <p class="mb-1">餐點數：{{final.length}}</p>
                 <p class="mb-1">付款狀態：未付款</p>
-                <p class="text-end mt-auto">共 NT${{finalTotal}} 元</p>
+                <p class="text-end mt-auto" ㄕㄟ>共 NT{{finalTotal}}元</p>
               </div>
             </div>
           </div>
@@ -268,13 +271,13 @@
             const App = {
               data() {
                 return {
+                  time: "",
                   itemSelected: {},
                   orderList: [],
+                  orderTotal: 0,
+                  total: [],
+                  finalTotal: 0,
                   finalList: [],
-                  listTotal: 0,
-                  finalTotal:0,
-                  listNumber: 0,
-                  time: "",
                   iceType: ["正常冰", "少冰", "微冰", "去冰", "熱"],
                   sugarType: ["全糖", "七分", "半糖", "三分", "無糖"],
                   toppingsType: ["珍珠", "粉條", "小粉圓", "椰果", "芋頭"],
@@ -393,68 +396,74 @@
                 };
               },
               methods: {
-                selectItem(drink) {
+                selectDrink(drink) {
                   this.itemSelected = {
                     ...drink,
                     count: 1,
-                    ice: drink.defaults.ice!=''?drink.defaults.ice:'正常冰',
-                    sugar: drink.defaults.sugar!=''?drink.defaults.sugar:'全糖',
+                    ice: [],
+                    sugar: [],
                     topping: [],
                     comment: "",
                   };
                 },
-                addOrder(itemSelected) {
+                addDrink(itemSelected) {
                   const order = {
                     ...itemSelected,
-                    drinkTotal:
+                    total:
                       itemSelected.count *
-                      (itemSelected.topping.length * 10 + itemSelected.price),
+                      (itemSelected.price + itemSelected.topping.length * 10),
                   };
-                  this.orderList.push(order);
-                  this.resetOrder(), this.countTotal();
-                },
-                countTotal() {
-                  (this.listTotal = 0),
-                    this.orderList.forEach((item) => {
-                      this.listTotal += item.drinkTotal;
-                    });
-                },
-                countNumber() {
-                  this.listNumber = 0;
-                  this.finalList.forEach(
-                    (item) => (this.listNumber += item.count)
-                  );
+                  this.orderList.push(order),
+                    this.countTotal(),
+                    this.resetOrder();
                 },
                 resetOrder() {
                   this.itemSelected = {};
                 },
-                createList() {
-                  if (this.orderList.length === 0) {
-                    alert("未選擇商品，無法產生訂單！");
-                  } else {
-                    this.finalList = this.orderList;
-                    this.finalTotal=this.listTotal;
-                  }
-                  this.listTotal=0;
-                  this.orderList = [];
-                  this.getTime();
-                  this.countNumber();
+                countTotal() {
+                  this.orderTotal = 0;
+                  this.orderList.forEach((order) => {
+                    this.orderTotal += order.total;
+                  });
                 },
-                getTime() {
-                  const now = new Date();
-                  let yy = now.getFullYear();
-                  yy = yy < 10 ? "0" + yy : yy;
-                  let mm = now.getMonth() + 1;
-                  mm = mm < 10 ? "0" + mm : mm;
-                  let dd = now.getDate();
-                  dd = dd < 10 ? "0" + dd : dd;
-                  let hh = now.getHours();
-                  hh = hh < 10 ? "0" + hh : hh;
-                  let min = now.getMinutes();
+                sendTotal() {
+                  this.total.push(this.orderTotal);
+                  console.log(this.total);
+                },
+                sendList(orderList) {
+                  if (orderList.length === 0) {
+                    alert("尚未新增新的訂單");
+                  } else {
+                    this.finalList.push(orderList);
+                  }
+                  this.sendTotal();
+                  this.checkTotal();
+                  this.getDate(), (this.orderList = []), (this.orderTotal = 0);
+                },
+                checkTotal() {
+                  this.finalList.forEach((item, key) => {
+                    if (this.finalList.key === this.total.key) {
+                      console.log(this.total[key]);
+                    } else {
+                      alert("none");
+                    }
+                  });
+                },
+                getDate() {
+                  const date = new Date();
+                  let y = date.getFullYear();
+                  y = y < 10 ? "0" + y : y;
+                  let m = date.getMonth() + 1;
+                  m = m < 10 ? "0" + m : m;
+                  let d = date.getDate();
+                  d = d < 10 ? "0" + d : d;
+                  let h = date.getHours();
+                  h = h < 10 ? "0" + h : h;
+                  let min = date.getMinutes();
                   min = min < 10 ? "0" + min : min;
-                  let ss = now.getSeconds();
-                  ss = ss < 10 ? "0" + ss : ss;
-                  this.time = `${yy}-${mm}-${dd} ${hh}:${min}:${ss}`;
+                  let s = date.getSeconds();
+                  s = s < 10 ? "0" + s : s;
+                  this.time = `${y}-${m}-${d}  ${h}:${min}:${s}`;
                 },
               },
             };
@@ -553,7 +562,7 @@
             </div>
             <div class="mt-3 text-end p-2 bg-light rounded">
               <small class="text-black-50 fw-light mb-0"
-                >文件版本：2022/11/1</small
+                >文件版本：2022/6/21</small
               >
             </div>
           </div>

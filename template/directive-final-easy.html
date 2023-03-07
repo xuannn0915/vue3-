@@ -46,12 +46,26 @@
                 <div class="col-md-8">
                   <!-- 細項選擇 -->
                   <div class="card mb-2">
-                    <div v-if="!itemSelected.name" class="position-absolute text-white d-flex align-items-center justify-content-center active" style="top: 0;bottom: 0;left: 0;right: 0;background-color: rgba(0, 0, 0, 0.65); z-index: 100;">請先選擇飲品</div>
+                    <div
+                      v-if="!itemSelected.name"
+                      class="position-absolute text-white d-flex align-items-center justify-content-center active"
+                      style="
+                        top: 0;
+                        bottom: 0;
+                        left: 0;
+                        right: 0;
+                        background-color: rgba(0, 0, 0, 0.65);
+                        z-index: 100;
+                      "
+                    >
+                      請先選擇飲品
+                    </div>
                     <div class="card-body px-4">
                       <div class="mb-3">
                         <label for="productNum" class="form-label">數量</label>
                         <input
                           type="number"
+                          v-model="itemSelected.count"
                           class="form-control"
                           id="productNum"
                           placeholder="數量"
@@ -94,14 +108,20 @@
                         <label for="productNum" class="form-label d-block"
                           >加料</label
                         >
-                        <div class="form-check form-check-inline">
+                        <div
+                          class="form-check form-check-inline"
+                          v-for="(topping,key) in toppingsType"
+                          :key="'topping'+key"
+                        >
                           <input
                             class="form-check-input"
                             type="checkbox"
-                            id="椰果"
+                            :id="'topping'+key"
+                            :value="topping"
+                            v-model="itemSelected.toppings"
                           />
-                          <label class="form-check-label" for="椰果"
-                            >椰果</label
+                          <label class="form-check-label" :for="'topping'+key"
+                            >{{topping}}</label
                           >
                         </div>
                       </div>
@@ -119,10 +139,15 @@
                         <button
                           class="btn btn-outline-primary w-100"
                           type="button"
+                          @click.prevent="resetOrder"
                         >
                           取消
                         </button>
-                        <button class="btn btn-primary w-100" type="button">
+                        <button
+                          class="btn btn-primary w-100"
+                          type="button"
+                          @click.prevent="addToOrder(itemSelected)"
+                        >
                           加入
                         </button>
                       </div>
@@ -145,24 +170,27 @@
                           </tr>
                         </thead>
                         <tbody>
-                          <tr>
+                          <tr
+                            v-for="(item, key) in orderList"
+                            :key="'order'+key"
+                          >
                             <th scope="row">
-                              珍珠鮮奶茶<br />
+                              {{item.name}}<br />
                               <small class="text-muted fw-normal"
                                 >備註：阿姨，我不想努力了</small
                               >
                             </th>
-                            <td>正常冰</td>
-                            <td>全糖</td>
-                            <td>椰果</td>
-                            <td>70</td>
-                            <td>1</td>
-                            <td class="text-end">70</td>
+                            <td></td>
+                            <td></td>
+                            <td>{{item.toppings.toString()}}</td>
+                            <td>{{item.price+item.toppings.length*10}}</td>
+                            <td>{{item.count}}</td>
+                            <td class="text-end">{{item.total}}</td>
                           </tr>
                         </tbody>
                       </table>
-                      <p class="text-end">共 NT$ 70 元</p>
-                      <button class="btn btn-sm btn-secondary w-100">
+                      <p class="text-end">共 NT$ {{orderTotal}}元</p>
+                      <button class="btn btn-sm btn-secondary w-100" @click.prevent="resetList">
                         重新選擇
                       </button>
                     </div>
@@ -177,7 +205,8 @@
               data() {
                 return {
                   itemSelected: {},
-                  orderList:[],
+                  orderList: [],
+                  orderTotal: 0,
                   iceType: ["正常冰", "少冰", "微冰", "去冰", "熱"],
                   sugarType: ["全糖", "七分", "半糖", "三分", "無糖"],
                   toppingsType: ["珍珠", "粉條", "小粉圓", "椰果", "芋頭"],
@@ -239,11 +268,32 @@
                 selectedProduct(product) {
                   this.itemSelected = {
                     ...product,
+                    toppings:[],
+                    count: 1,
                   };
                 },
-                addToOrder(product){
-                  this.orderList.push(product);
-                }
+                resetOrder() {
+                  this.itemSelected = {};
+                },
+                resetList(){
+                  this.orderList=[];
+                  this.orderTotal=0;
+                },
+                addToOrder(product) {
+                  const order = {
+                    ...product,
+                    total: (product.price+product.toppings.length*10) * product.count,
+                  };
+                  this.orderList.push(order);
+                  this.countTotal();
+                  this.resetOrder();
+                },
+                countTotal() {
+                  (this.orderTotal = 0),
+                    this.orderList.forEach((item) => {
+                      this.orderTotal += item.total;
+                    });
+                },
               },
             };
 
